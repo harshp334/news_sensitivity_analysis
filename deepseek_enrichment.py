@@ -1,13 +1,12 @@
 import requests
-import json
 import pandas as pd
 import time
 import os
 from typing import Dict, List, Optional
-import re
 import logging
 
 logger = logging.getLogger(__name__)
+
 def _load_dotenv(path='.env'):
     data = {}
     try:
@@ -271,17 +270,17 @@ class DeepSeekEnhancer:
         
         return bias_data
     
-    def comprehensive_analysis(self, title: str, description: str, 
-                             content: str = "", source_name: str = "") -> Dict:
+    def comprehensive_analysis(self, title: str, description: str,
+                               content: str = "", source_name: str = "") -> Dict:
         """
         Perform comprehensive analysis combining all three methods
-        
+
         Args:
             title (str): Article title
             description (str): Article description
             content (str): Full article content (optional)
             source_name (str): Source name
-            
+
         Returns:
             dict: Complete analysis results
         """
@@ -289,44 +288,44 @@ class DeepSeekEnhancer:
         analysis_text = f"{title}. {description}"
         if content:
             analysis_text += f" {content[:300]}"  # Limit content length
-        
-        print(f"Analyzing: {title[:50]}...")
-        
+
+        logger.info(f"Analyzing: {title[:50]}...")
+
         # Perform all three analyses
         sentiment_results = self.analyze_sentiment(analysis_text)
         topic_results = self.categorize_topic(analysis_text)
         bias_results = self.detect_bias(analysis_text, source_name)
-        
+
         # Combine results
         comprehensive_results = {
             # Original data
             'title': title,
             'description': description,
             'source_name': source_name,
-            
+
             # Sentiment Analysis
             'ai_sentiment': sentiment_results['sentiment'],
             'ai_sentiment_confidence': sentiment_results['confidence'],
             'ai_emotional_tone': sentiment_results['emotional_tone'],
             'ai_sentiment_reasoning': sentiment_results['reasoning'],
-            
+
             # Topic Categorization
             'ai_primary_category': topic_results['primary_category'],
             'ai_secondary_category': topic_results['secondary_category'],
             'ai_keywords': topic_results['keywords'],
             'ai_specificity': topic_results['specificity'],
-            
+
             # Bias Detection
             'ai_bias_level': bias_results['bias_level'],
             'ai_bias_direction': bias_results['bias_direction'],
             'ai_objectivity': bias_results['objectivity'],
             'ai_bias_indicators': bias_results['indicators'],
-            
+
             # Metadata
             'ai_analysis_timestamp': pd.Timestamp.now().isoformat(),
             'ai_total_requests': 3  # One for each analysis type
         }
-        
+
         return comprehensive_results
 
 def enrich_dataframe(df: pd.DataFrame, deepseek_api_key: str, 
@@ -345,8 +344,8 @@ def enrich_dataframe(df: pd.DataFrame, deepseek_api_key: str,
     enhancer = DeepSeekEnhancer(deepseek_api_key)
     enriched_data = []
     
-    print(f"Starting DeepSeek enhancement of {len(df)} articles...")
-    print(f"Processing in batches of {batch_size}")
+    logger.info(f"Starting DeepSeek enhancement of {len(df)} articles...")
+    logger.info(f"Processing in batches of {batch_size}")
     
     for i, row in df.iterrows():
         try:
@@ -364,10 +363,10 @@ def enrich_dataframe(df: pd.DataFrame, deepseek_api_key: str,
             
             # Progress update
             if (i + 1) % batch_size == 0:
-                print(f"Processed {i + 1}/{len(df)} articles...")
+                logger.info(f"Processed {i + 1}/{len(df)} articles...")
                 
         except Exception as e:
-            print(f"Error processing article {i}: {e}")
+            logger.error(f"Error processing article {i}: {e}")
             # Add original data with error markers
             error_row = row.to_dict()
             error_row.update({
@@ -378,8 +377,8 @@ def enrich_dataframe(df: pd.DataFrame, deepseek_api_key: str,
             })
             enriched_data.append(error_row)
     
-    print(f"Enhancement complete! Processed {len(enriched_data)} articles")
-    print(f"Total API requests made: {enhancer.request_count}")
+    logger.info(f"Enhancement complete! Processed {len(enriched_data)} articles")
+    logger.info(f"Total API requests made: {enhancer.request_count}")
     
     return pd.DataFrame(enriched_data)
 
@@ -396,38 +395,7 @@ def save_enriched_data(df: pd.DataFrame, filename: str = "enriched_news_analysis
     
     filepath = f"data/enriched/{filename}"
     df.to_csv(filepath, index=False)
-    print(f"Enriched data saved to {filepath}")
-    
-    # Save a summary report
-    summary_filepath = f"data/enriched/analysis_summary.txt"
-    with open(summary_filepath, 'w') as f:
-        f.write("DeepSeek News Analysis Summary\n")
-        f.write("=" * 40 + "\n\n")
-        f.write(f"Total Articles Analyzed: {len(df)}\n")
-        f.write(f"Analysis Timestamp: {pd.Timestamp.now()}\n\n")
-        
-        # Sentiment distribution
-        if 'ai_sentiment' in df.columns:
-            sentiment_dist = df['ai_sentiment'].value_counts()
-            f.write("Sentiment Distribution:\n")
-            for sentiment, count in sentiment_dist.items():
-                f.write(f"  {sentiment}: {count}\n")
-        
-        # Topic distribution  
-        if 'ai_primary_category' in df.columns:
-            topic_dist = df['ai_primary_category'].value_counts()
-            f.write("\nTopic Distribution:\n")
-            for topic, count in topic_dist.items():
-                f.write(f"  {topic}: {count}\n")
-        
-        # Bias distribution
-        if 'ai_bias_level' in df.columns:
-            bias_dist = df['ai_bias_level'].value_counts()
-            f.write("\nBias Level Distribution:\n")
-            for bias, count in bias_dist.items():
-                f.write(f"  {bias}: {count}\n")
-    
-    print(f"Summary report saved to {summary_filepath}")
+    logger.info(f"Enriched data saved to {filepath}")
     return filepath
 
 # Testing function
@@ -449,29 +417,29 @@ def test_deepseek_enhancement():
     
     test_df = pd.DataFrame(sample_data)
     
-    print("Testing DeepSeek Enhancement...")
-    print("-" * 50)
+    logger.info("Testing DeepSeek Enhancement...")
+    logger.info("-" * 50)
     
     # Load API key from .env or environment for testing
     api_key = DEEPSEEK_KEY or os.environ.get('DEEPSEEK_KEY')
     if not api_key:
-        print("No DeepSeek API key found in .env or environment. Set DEEPSEEK_KEY to run tests.")
+        logger.error("No DeepSeek API key found in .env or environment. Set DEEPSEEK_KEY to run tests.")
         return pd.DataFrame()
     
     # Enrich the sample data
     enriched_df = enrich_dataframe(test_df, api_key, batch_size=3)
     
     # Display results
-    print("\nEnhancement Results:")
-    print("=" * 50)
-    
+    logger.info("\nEnhancement Results:")
+    logger.info("=" * 50)
+
     for i, row in enriched_df.iterrows():
-        print(f"\nArticle {i+1}: {row['title']}")
-        print(f"  Sentiment: {row.get('ai_sentiment', 'N/A')} ({row.get('ai_sentiment_confidence', 'N/A')} confidence)")
-        print(f"  Category: {row.get('ai_primary_category', 'N/A')}")
-        print(f"  Keywords: {row.get('ai_keywords', 'N/A')}")
-        print(f"  Bias Level: {row.get('ai_bias_level', 'N/A')}")
-        print(f"  Objectivity: {row.get('ai_objectivity', 'N/A')}")
+        logger.info(f"\nArticle {i+1}: {row['title']}")
+        logger.info(f"  Sentiment: {row.get('ai_sentiment', 'N/A')} ({row.get('ai_sentiment_confidence', 'N/A')} confidence)")
+        logger.info(f"  Category: {row.get('ai_primary_category', 'N/A')}")
+        logger.info(f"  Keywords: {row.get('ai_keywords', 'N/A')}")
+        logger.info(f"  Bias Level: {row.get('ai_bias_level', 'N/A')}")
+        logger.info(f"  Objectivity: {row.get('ai_objectivity', 'N/A')}")
     
     # Save test results
     save_enriched_data(enriched_df, "test_enrichment_results.csv")

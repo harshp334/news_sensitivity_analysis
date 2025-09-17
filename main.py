@@ -8,11 +8,8 @@ from datetime import datetime, timedelta
 import argparse
 from urllib.parse import urljoin, urlparse
 import logging
-import json
 
-# Optional: you can set your API keys directly here (string).
-# If left as None, the script will use --newsapi-key CLI arg or NEWSAPI_KEY env var.
-# Load API keys from environment or a local `.env` file (do not rely on importing a dotfile as a module)
+# Load API keys from environment or a local `.env` file
 def _load_dotenv(path='.env'):
     data = {}
     try:
@@ -413,8 +410,8 @@ class NewsAnalysisPipeline:
         
         logger.info("Pipeline initialized successfully")
     
-    def extract_news_data(self, categories=['technology', 'business'], 
-                         search_terms=['Reuters'], max_articles=50, 
+    def extract_news_data(self, categories=None, 
+                         search_terms=None, max_articles=50, 
                          target_date=None):
         """
         Extract data from NewsAPI and identify Reuters articles
@@ -429,6 +426,12 @@ class NewsAnalysisPipeline:
             pd.DataFrame: Raw news data
         """
         logger.info("Starting news data extraction...")
+
+        # Set default mutable args
+        if categories is None:
+            categories = ['technology', 'business']
+        if search_terms is None:
+            search_terms = ['Reuters']
         
         # Handle date filtering
         if target_date:
@@ -755,8 +758,8 @@ class NewsAnalysisPipeline:
         return scores
     
     def run_pipeline(self, max_articles=30, max_scrapes=15, 
-                    categories=['technology', 'business'],
-                    search_terms=['Reuters'], target_date=None):
+                    categories=None,
+                    search_terms=None, target_date=None):
         """
         Run the complete ETL pipeline
         
@@ -772,6 +775,12 @@ class NewsAnalysisPipeline:
         """
         logger.info("="*60)
         logger.info("STARTING NEWS ANALYSIS PIPELINE")
+
+        # Default mutable args
+        if categories is None:
+            categories = ['technology', 'business']
+        if search_terms is None:
+            search_terms = ['Reuters']
         logger.info("="*60)
         
         start_time = datetime.now()
@@ -1006,6 +1015,9 @@ def main():
                        help="Test API connections and exit")
     
     args = parser.parse_args()
+
+    # Resolve DeepSeek key early so test-connection branch can use it
+    resolved_deepseek_key = args.deepseek_key or DEEPSEEK_KEY or os.getenv('DEEPSEEK_KEY')
     
     # Resolve NewsAPI key: module-level `NEWSAPI_KEY` (if set) -> CLI arg -> NEWSAPI_KEY env var
     if NEWSAPI_KEY:
@@ -1058,8 +1070,7 @@ def main():
     logger.info(f"DeepSeek API configured: {'Yes' if deepseek_key_present else 'No'}")
     logger.info("="*60)
     
-    # Resolve DeepSeek key: prefer CLI arg -> module-level DEEPSEEK_KEY -> environment
-    resolved_deepseek_key = args.deepseek_key or DEEPSEEK_KEY or os.getenv('DEEPSEEK_KEY')
+    # (resolved_deepseek_key already set above)
 
     # Initialize and run pipeline
     try:
